@@ -1,0 +1,108 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const entries = (await getCollection('activities')).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+
+const fmt = (d: Date) =>
+  d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+---
+
+<BaseLayout title="活动" description="社团活动回顾与记录">
+  <div class="wrap page">
+    <header class="page-head">
+      <p class="eyebrow">Activities</p>
+      <h1>活动记录</h1>
+      <p class="lede">合宿、漫展、放映、作画日——每次都留下一点记录。</p>
+    </header>
+
+    {
+      entries.length === 0 ? (
+        <p class="muted">还没有活动记录。</p>
+      ) : (
+        <div class="grid list">
+          {entries.map((entry) => (
+            <a class="card item reveal" href={`/activities/${entry.id}`}>
+              <div class="item-head">
+                <time datetime={entry.data.date.toISOString()}>{fmt(entry.data.date)}</time>
+                {entry.data.location && <span class="muted loc">{entry.data.location}</span>}
+              </div>
+              <h2>{entry.data.title}</h2>
+              <p class="muted">{entry.data.summary}</p>
+              {entry.data.tags.length > 0 && (
+                <ul class="tags">
+                  {entry.data.tags.map((tag) => (
+                    <li>{tag}</li>
+                  ))}
+                </ul>
+              )}
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .list {
+    gap: 16px;
+  }
+
+  .item {
+    text-decoration: none;
+    display: block;
+    transition: transform 0.18s, border-color 0.18s;
+  }
+
+  .item:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+  }
+
+  .item-head {
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    font-size: 0.84rem;
+  }
+
+  .item-head time {
+    color: var(--accent);
+    letter-spacing: 0.04em;
+  }
+
+  .loc::before {
+    content: '· ';
+  }
+
+  .item h2 {
+    font-size: 1.3rem;
+    margin: 10px 0 8px;
+  }
+
+  .item p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .tags {
+    display: flex;
+    gap: 8px;
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 0;
+    flex-wrap: wrap;
+  }
+
+  .tags li {
+    font-size: 0.76rem;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px 10px;
+  }
+</style>

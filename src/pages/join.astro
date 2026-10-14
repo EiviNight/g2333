@@ -1,0 +1,211 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../config';
+---
+
+<BaseLayout title="加入我们" description="填写报名表加入社团">
+  <div class="wrap page">
+    <header class="page-head">
+      <p class="eyebrow">Join us</p>
+      <h1>加入我们</h1>
+      <p class="lede">{SITE.recruit}填完这张表，我们会通过你留下的联系方式找你。</p>
+    </header>
+
+    <div class="grid grid-2">
+      <form id="join-form" class="card form">
+        <label>
+          <span>昵称 / 称呼<em>*</em></span>
+          <input name="name" type="text" required maxlength="40" autocomplete="nickname" />
+        </label>
+
+        <label>
+          <span>联系方式（QQ 或微信）<em>*</em></span>
+          <input name="contact" type="text" required maxlength="60" />
+        </label>
+
+        <label>
+          <span>感兴趣的方向</span>
+          <select name="interest">
+            <option value="观看与讨论">观看与讨论</option>
+            <option value="画画 / 同人创作">画画 / 同人创作</option>
+            <option value="游戏">游戏</option>
+            <option value="组织与后勤">组织与后勤</option>
+            <option value="还没想好">还没想好</option>
+          </select>
+        </label>
+
+        <label>
+          <span>想说点什么</span>
+          <textarea name="message" rows="4" maxlength="500" placeholder="比如喜欢的作品、会什么技能"></textarea>
+        </label>
+
+        <button class="btn btn-primary" type="submit">提交报名</button>
+        <p id="form-status" class="status" role="status" aria-live="polite"></p>
+      </form>
+
+      <aside class="card">
+        <h2>也可以直接找我们</h2>
+        <ul class="contacts">
+          <li>
+            <span class="muted">邮箱</span>
+            <a href={`mailto:${SITE.contact.email}`}>{SITE.contact.email}</a>
+          </li>
+          <li>
+            <span class="muted">QQ 群</span>
+            <strong>{SITE.contact.qq}</strong>
+          </li>
+          <li>
+            <span class="muted">哔哩哔哩</span>
+            <a href={SITE.contact.bilibili} rel="noopener noreferrer">关注我们</a>
+          </li>
+        </ul>
+        <p class="muted note">
+          社费每年一次，用于活动室、社刊印刷和漫展摊位，金额在学期初公开。
+        </p>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline define:vars={{ contactEmail: SITE.contact.email, contactQQ: SITE.contact.qq }}>
+  // 表单目前没有后端。提交时先试 /api/join，失败就明确提示改用邮件/QQ —— 不会假装成功。
+  const form = document.getElementById('join-form');
+  const status = document.getElementById('form-status');
+
+  if (form && status) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(form).entries());
+      status.textContent = '正在提交…';
+      status.dataset.state = 'pending';
+
+      try {
+        const res = await fetch('/api/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        if (res.ok) {
+          status.textContent = '报名已提交，我们会尽快联系你。';
+          status.dataset.state = 'ok';
+          form.reset();
+          return;
+        }
+        throw new Error('status ' + res.status);
+      } catch {
+        status.textContent =
+          '表单后端还没接上。请发邮件到 ' + contactEmail + '，或加 QQ 群 ' + contactQQ + '。';
+        status.dataset.state = 'err';
+      }
+    });
+  }
+</script>
+
+<style>
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .form label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.9rem;
+  }
+
+  .form label span {
+    color: var(--muted);
+  }
+
+  .form em {
+    color: var(--accent);
+    font-style: normal;
+    margin-left: 3px;
+  }
+
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: var(--text);
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 10px 12px;
+    width: 100%;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  .form .btn {
+    align-self: flex-start;
+    border: none;
+  }
+
+  .status {
+    margin: 0;
+    font-size: 0.88rem;
+    min-height: 1.4em;
+  }
+
+  .status[data-state='ok'] {
+    color: #34d399;
+  }
+
+  .status[data-state='err'] {
+    color: #fbbf24;
+  }
+
+  .status[data-state='pending'] {
+    color: var(--muted);
+  }
+
+  .contacts {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .contacts li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .contacts li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .contacts span {
+    font-size: 0.8rem;
+  }
+
+  .contacts a {
+    color: var(--accent);
+    text-decoration: none;
+    word-break: break-all;
+  }
+
+  .note {
+    font-size: 0.85rem;
+    margin: 0;
+  }
+</style>

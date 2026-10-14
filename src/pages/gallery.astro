@@ -1,0 +1,105 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+/**
+ * 画廊数据。
+ *
+ * 换成真作品的方式：
+ * 1. 把图片放进 public/gallery/（文件名随意，建议小写英文 + 短横线）
+ * 2. 改下面的 GALLERY 数组，src 写 /gallery/文件名
+ * 3. 图片建议先用 WebP，单张控制在 300KB 以内
+ *
+ * 如果换成 src/assets/ 并用 import，Astro 会自动做尺寸优化，
+ * 但那要求构建时用 Astro 的图像服务，这里先用 public 保持简单。
+ */
+interface Work {
+  src: string;
+  title: string;
+  author?: string;
+  /** 占位图带内联文字，真作品用 alt 描述 */
+  alt?: string;
+}
+
+const GALLERY: Work[] = [
+  { src: '/gallery/sakura-road.svg', title: '樱花坂道' },
+  { src: '/gallery/starfall.svg', title: '星空下的约定' },
+  { src: '/gallery/rainy-window.svg', title: '雨天的窗' },
+  { src: '/gallery/summer-festival.svg', title: '夏日祭典' },
+  { src: '/gallery/mecha-dock.svg', title: '机库黄昏' },
+  { src: '/gallery/cat-cafe.svg', title: '猫与咖啡' },
+  { src: '/gallery/deep-sea.svg', title: '深海回声' },
+  { src: '/gallery/lantern-night.svg', title: '灯笼夜行' },
+  { src: '/gallery/train-window.svg', title: '车窗外的雪' },
+  { src: '/gallery/shrine-steps.svg', title: '神社长阶' },
+  { src: '/gallery/city-pop.svg', title: 'City Pop 夜' },
+  { src: '/gallery/morning-class.svg', title: '早自习' },
+];
+---
+
+<BaseLayout title="画廊" description="社团成员的作品展示">
+  <div class="wrap page">
+    <header class="page-head">
+      <p class="eyebrow">Gallery</p>
+      <h1>画廊</h1>
+      <p class="lede">社员作品展示。当前是占位图，替换成真作品后直接部署即可。</p>
+    </header>
+
+    <div class="gallery reveal">
+      {
+        GALLERY.map((work) => (
+          <figure class="work">
+            <img src={work.src} alt={work.alt ?? work.title} loading="lazy" decoding="async" />
+            <figcaption>
+              <span>{work.title}</span>
+              {work.author && <em>{work.author}</em>}
+            </figcaption>
+          </figure>
+        ))
+      }
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .work {
+    margin: 0;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--line);
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .work:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+  }
+
+  .work img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    background: var(--bg-soft);
+  }
+
+  .work figcaption {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    font-size: 0.9rem;
+  }
+
+  .work em {
+    font-style: normal;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+</style>

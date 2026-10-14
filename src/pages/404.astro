@@ -1,0 +1,34 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="页面不存在" description="找不到这个页面">
+  <div class="wrap page notfound">
+    <p class="eyebrow">404</p>
+    <h1>这个页面不在</h1>
+    <p class="lede">链接可能过期了，或者地址打错了一个字。</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="/">回首页</a>
+      <a class="btn btn-ghost" href="/activities">看活动记录</a>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .notfound {
+    text-align: center;
+    padding-top: 96px;
+  }
+
+  .notfound .lede {
+    margin-inline: auto;
+  }
+
+  .actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 28px;
+  }
+</style>

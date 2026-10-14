@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img" aria-label="City Pop 夜">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ec4899"/>
+      <stop offset="1" stop-color="#4c1d95"/>
+    </linearGradient>
+    <linearGradient id="v" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.45"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#g)"/>
+  <circle cx="408.00000000000006" cy="304" r="152" fill="#fff" fill-opacity="0.24"/>
+  <circle cx="888" cy="576" r="94.24" fill="#fff" fill-opacity="0.14"/>
+  <rect y="463.99999999999994" width="1200" height="336" fill="url(#v)"/>
+  <text x="600" y="720" text-anchor="middle" fill="#fff" fill-opacity="0.95"
+        font-family="ui-sans-serif, system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif"
+        font-size="60" font-weight="600">City Pop 夜</text>
+</svg>

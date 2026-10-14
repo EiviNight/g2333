@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 950" width="1000" height="950" role="img" aria-label="早自习">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#facc15"/>
+      <stop offset="1" stop-color="#fb923c"/>
+    </linearGradient>
+    <linearGradient id="v" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.45"/>
+    </linearGradient>
+  </defs>
+  <rect width="1000" height="950" fill="url(#g)"/>
+  <circle cx="340" cy="361" r="180.5" fill="#fff" fill-opacity="0.24"/>
+  <circle cx="740" cy="684" r="111.91" fill="#fff" fill-opacity="0.14"/>
+  <rect y="551" width="1000" height="399" fill="url(#v)"/>
+  <text x="500" y="855" text-anchor="middle" fill="#fff" fill-opacity="0.95"
+        font-family="ui-sans-serif, system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif"
+        font-size="71" font-weight="600">早自习</text>
+</svg>

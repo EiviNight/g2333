@@ -4,6 +4,8 @@
   "compatibility_date": "2026-10-14",
   "assets": {
     // Astro 静态站的构建产物目录
-    "directory": "./dist"
+    "directory": "./dist",
+    // 找不到路径时用 dist/404.html（由 src/pages/404.astro 生成）
+    "not_found_handling": "404-page"
   }
 }

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 750" width="1300" height="750" role="img" aria-label="机库黄昏">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#7c2d12"/>
+    </linearGradient>
+    <linearGradient id="v" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.45"/>
+    </linearGradient>
+  </defs>
+  <rect width="1300" height="750" fill="url(#g)"/>
+  <circle cx="442.00000000000006" cy="285" r="142.5" fill="#fff" fill-opacity="0.24"/>
+  <circle cx="962" cy="540" r="88.35" fill="#fff" fill-opacity="0.14"/>
+  <rect y="434.99999999999994" width="1300" height="315" fill="url(#v)"/>
+  <text x="650" y="675" text-anchor="middle" fill="#fff" fill-opacity="0.95"
+        font-family="ui-sans-serif, system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif"
+        font-size="56" font-weight="600">机库黄昏</text>
+</svg>

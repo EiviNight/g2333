@@ -1,0 +1,413 @@
+---
+import { SITE, NAV } from '../config';
+
+export interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { name: siteName } = SITE;
+const { title, description = SITE.description } = Astro.props;
+const pageTitle = title ? `${title} · ${siteName}` : siteName;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={Astro.url} />
+    <meta name="theme-color" content="#14121f" />
+  </head>
+  <body>
+    <a class="skip" href="#main">跳到正文</a>
+
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="/">
+          <span class="brand-mark" aria-hidden="true">G</span>
+          <span class="brand-text">{SITE.name}</span>
+        </a>
+        <nav class="nav" aria-label="主导航">
+          {
+            NAV.map((item) => (
+              <a href={item.href} aria-current={Astro.url.pathname === item.href ? 'page' : undefined}>
+                {item.label}
+              </a>
+            ))
+          }
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap footer-inner">
+        <div>
+          <p class="footer-name">{SITE.name}</p>
+          <p class="muted">{SITE.recruit}</p>
+        </div>
+        <div class="footer-links">
+          <a href={`mailto:${SITE.contact.email}`}>{SITE.contact.email}</a>
+          <a href={SITE.contact.bilibili} rel="noopener noreferrer">哔哩哔哩</a>
+          <a href="/join">加入我们</a>
+        </div>
+      </div>
+      <div class="wrap muted footer-copy">© {new Date().getFullYear()} {SITE.name}</div>
+    </footer>
+  </body>
+</html>
+
+<script>
+  // 页面进入视口时淡入，纯渐进增强：JS 没跑也不影响内容可读
+  const items = document.querySelectorAll<HTMLElement>('.reveal');
+  if (items.length && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('reveal-in');
+            io.unobserve(entry.target);
+          }
+        }
+      },
+      { rootMargin: '0px 0px -10% 0px' },
+    );
+    items.forEach((el) => io.observe(el));
+  } else {
+    items.forEach((el) => el.classList.add('reveal-in'));
+  }
+</script>
+
+<style is:global>
+  /* ===== 设计变量：改这里就能换主题 ===== */
+  :root {
+    --bg: #14121f;
+    --bg-soft: #1c1930;
+    --card: #211d38;
+    --line: #322c52;
+    --text: #eae7f5;
+    --muted: #a49fc2;
+    --accent: #ff5c8a;
+    --accent-2: #6c5ce7;
+    --radius: 14px;
+    --wrap: 1080px;
+    --font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+      'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* 背景微光，纯装饰 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background:
+      radial-gradient(60ch 60ch at 12% -8%, rgba(255, 92, 138, 0.16), transparent 70%),
+      radial-gradient(50ch 50ch at 92% 4%, rgba(108, 92, 231, 0.18), transparent 70%);
+  }
+
+  main {
+    flex: 1;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: var(--wrap);
+    margin-inline: auto;
+    padding-inline: 20px;
+  }
+
+  .muted {
+    color: var(--muted);
+  }
+
+  .skip {
+    position: absolute;
+    left: -9999px;
+  }
+  .skip:focus {
+    left: 12px;
+    top: 12px;
+    z-index: 10;
+    background: var(--card);
+    padding: 8px 14px;
+    border-radius: 8px;
+  }
+
+  /* ===== 头部 ===== */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    backdrop-filter: blur(12px);
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 64px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    font-size: 1rem;
+  }
+
+  .nav {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .nav a {
+    text-decoration: none;
+    color: var(--muted);
+    padding: 7px 13px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    transition: color 0.18s, background 0.18s;
+  }
+
+  .nav a:hover {
+    color: var(--text);
+    background: var(--bg-soft);
+  }
+
+  .nav a[aria-current='page'] {
+    color: var(--text);
+    background: var(--card);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+
+  /* ===== 通用版面 ===== */
+  .page {
+    padding: 56px 0 72px;
+  }
+
+  .page-head {
+    margin-bottom: 36px;
+  }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.74rem;
+    color: var(--accent);
+    margin: 0 0 10px;
+    font-weight: 700;
+  }
+
+  h1 {
+    font-size: clamp(1.9rem, 5vw, 2.9rem);
+    line-height: 1.2;
+    margin: 0 0 14px;
+  }
+
+  h2 {
+    font-size: clamp(1.35rem, 3vw, 1.75rem);
+    margin: 0 0 18px;
+  }
+
+  h3 {
+    font-size: 1.08rem;
+    margin: 0 0 8px;
+  }
+
+  .lede {
+    font-size: 1.06rem;
+    color: var(--muted);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+  }
+
+  .grid {
+    display: grid;
+    gap: 18px;
+  }
+
+  @media (min-width: 700px) {
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+
+  .btn:active {
+    transform: translateY(1px);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+  }
+
+  .btn-ghost {
+    border-color: var(--line);
+    color: var(--text);
+    background: transparent;
+  }
+
+  .btn-ghost:hover {
+    background: var(--bg-soft);
+  }
+
+  /* ===== 页脚 ===== */
+  .site-footer {
+    border-top: 1px solid var(--line);
+    margin-top: auto;
+    padding: 34px 0 26px;
+    background: var(--bg-soft);
+  }
+
+  .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .footer-name {
+    margin: 0;
+    font-weight: 700;
+  }
+
+  .footer-inner .muted {
+    margin: 4px 0 0;
+    font-size: 0.92rem;
+  }
+
+  .footer-links {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.92rem;
+  }
+
+  .footer-links a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .footer-links a:hover {
+    color: var(--accent);
+  }
+
+  .footer-copy {
+    font-size: 0.82rem;
+    margin-top: 22px;
+  }
+
+  /* ===== 滚动淡入 ===== */
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .reveal-in {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    .reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+</style>

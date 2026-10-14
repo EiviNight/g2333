@@ -1,17 +1,197 @@
 ---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../config';
+import { getCollection } from 'astro:content';
+
+const all = await getCollection('activities');
+const recent = all
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 3);
+
+const fmt = (d: Date) =>
+  d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+
+const features = [
+  { title: '每周固定放映', body: '每周三晚在活动室，由社员轮流提名、投票选片，新人也有话语权。' },
+  { title: '画稿与同人创作', body: '每月一次集体作画日，社刊每年出两期，投稿不看水平只看完成度。' },
+  { title: '漫展出摊', body: '春秋两场申请摊位，社刊与社员周边一起上架，摊位费由社团经费平摊。' },
+];
 ---
 
-<html lang="zh-CN">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<meta name="description" content="G2333 动漫社官方网站" />
-		<title>G2333 动漫社</title>
-	</head>
-	<body>
-		<h1>G2333 动漫社</h1>
-	</body>
-</html>
+<BaseLayout description={SITE.description}>
+  <section class="wrap hero">
+    <p class="eyebrow">Anime &amp; Doujin Club</p>
+    <h1>{SITE.name}</h1>
+    <p class="lede hero-lede">{SITE.description}</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="/join">加入我们</a>
+      <a class="btn btn-ghost" href="/activities">看看活动</a>
+    </div>
+    <ul class="hero-stats">
+      <li><strong>3</strong><span>每周固定活动</span></li>
+      <li><strong>2</strong><span>每年社刊期数</span></li>
+      <li><strong>0</strong><span>加入门槛</span></li>
+    </ul>
+  </section>
+
+  <section class="wrap section reveal">
+    <h2>我们在做什么</h2>
+    <div class="grid grid-3">
+      {
+        features.map((f) => (
+          <article class="card feature">
+            <h3>{f.title}</h3>
+            <p class="muted">{f.body}</p>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="wrap section reveal">
+    <div class="section-head">
+      <h2>近期活动</h2>
+      <a class="more" href="/activities">全部活动 →</a>
+    </div>
+    <div class="grid grid-3">
+      {
+        recent.map((entry) => (
+          <a class="card activity" href={`/activities/${entry.id}`}>
+            <time datetime={entry.data.date.toISOString()}>{fmt(entry.data.date)}</time>
+            <h3>{entry.data.title}</h3>
+            <p class="muted">{entry.data.summary}</p>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="wrap section reveal">
+    <div class="card cta">
+      <div>
+        <h2>想加入？</h2>
+        <p class="muted">{SITE.recruit}</p>
+      </div>
+      <a class="btn btn-primary" href="/join">填写报名表</a>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    padding: 64px 20px 40px;
+  }
+
+  .hero-lede {
+    margin-bottom: 26px;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    list-style: none;
+    margin: 0;
+    padding: 22px 0 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .hero-stats li {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero-stats strong {
+    font-size: 1.7rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .hero-stats span {
+    font-size: 0.86rem;
+    color: var(--muted);
+  }
+
+  .section {
+    padding: 40px 20px;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+
+  .section-head h2 {
+    margin: 0;
+  }
+
+  .more {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.92rem;
+  }
+
+  .more:hover {
+    color: var(--accent);
+  }
+
+  .feature p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .activity {
+    text-decoration: none;
+    display: block;
+    transition: transform 0.18s, border-color 0.18s;
+  }
+
+  .activity:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+  }
+
+  .activity time {
+    font-size: 0.8rem;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+  }
+
+  .activity h3 {
+    margin: 8px 0 10px;
+  }
+
+  .activity p {
+    margin: 0;
+    font-size: 0.92rem;
+  }
+
+  .cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .cta h2 {
+    margin-bottom: 6px;
+  }
+
+  .cta p {
+    margin: 0;
+  }
+</style>
