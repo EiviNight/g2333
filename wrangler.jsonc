@@ -1,0 +1,9 @@
+{
+  // 项目名必须与 Cloudflare dashboard 里创建的项目名一致
+  "name": "g2333",
+  "compatibility_date": "2026-10-14",
+  "assets": {
+    // Astro 静态站的构建产物目录
+    "directory": "./dist"
+  }
+}
