@@ -24,8 +24,8 @@ const features = [
     <h1>{SITE.name}</h1>
     <p class="lede hero-lede">{SITE.description}</p>
     <div class="hero-actions">
-      <a class="btn btn-primary" href="/join">加入我们</a>
-      <a class="btn btn-ghost" href="/activities">看看活动</a>
+      <a class="btn btn-primary" href="/join/">加入我们</a>
+      <a class="btn btn-ghost" href="/activities/">看看活动</a>
     </div>
     <ul class="hero-stats">
       <li><strong>3</strong><span>每周固定活动</span></li>
@@ -51,12 +51,12 @@ const features = [
   <section class="wrap section reveal">
     <div class="section-head">
       <h2>近期活动</h2>
-      <a class="more" href="/activities">全部活动 →</a>
+      <a class="more" href="/activities/">全部活动 →</a>
     </div>
     <div class="grid grid-3">
       {
         recent.map((entry) => (
-          <a class="card activity" href={`/activities/${entry.id}`}>
+          <a class="card activity" href={`/activities/${entry.id}/`}>
             <time datetime={entry.data.date.toISOString()}>{fmt(entry.data.date)}</time>
             <h3>{entry.data.title}</h3>
             <p class="muted">{entry.data.summary}</p>
@@ -72,7 +72,7 @@ const features = [
         <h2>想加入？</h2>
         <p class="muted">{SITE.recruit}</p>
       </div>
-      <a class="btn btn-primary" href="/join">填写报名表</a>
+      <a class="btn btn-primary" href="/join/">填写报名表</a>
     </div>
   </section>
 </BaseLayout>

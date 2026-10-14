@@ -24,7 +24,7 @@ const fmt = (d: Date) =>
       ) : (
         <div class="grid list">
           {entries.map((entry) => (
-            <a class="card item reveal" href={`/activities/${entry.id}`}>
+            <a class="card item reveal" href={`/activities/${entry.id}/`}>
               <div class="item-head">
                 <time datetime={entry.data.date.toISOString()}>{fmt(entry.data.date)}</time>
                 {entry.data.location && <span class="muted loc">{entry.data.location}</span>}

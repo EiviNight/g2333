@@ -22,7 +22,7 @@ export const SITE = {
 /** 顶部导航 */
 export const NAV = [
   { href: '/', label: '首页' },
-  { href: '/activities', label: '活动' },
-  { href: '/gallery', label: '画廊' },
-  { href: '/join', label: '加入我们' },
+  { href: '/activities/', label: '活动' },
+  { href: '/gallery/', label: '画廊' },
+  { href: '/join/', label: '加入我们' },
 ] as const;
