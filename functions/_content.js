@@ -122,6 +122,28 @@ export function normalizeInput(body, { requireAll, kind }) {
 const TABLES = { activities: 'activities', posts: 'posts' };
 
 /**
+ * 取出条目 id。
+ *
+ * 优先用路由参数，取不到时从 URL 路径末段解析。
+ * 为什么要兜底：Pages Functions 的 `params` 在部分情况下拿不到动态段的值
+ * （曾出现过 params.id 为空、导致详情/编辑/删除全部查不到记录的情况）。
+ * 路径解析与参数解析得到的是同一个值，所以两条路都留着更稳。
+ */
+function resolveId(request, params) {
+  const fromParams = params && typeof params.id === 'string' ? params.id : '';
+  if (fromParams) return decodeURIComponent(fromParams);
+
+  try {
+    const segments = new URL(request.url).pathname.split('/').filter(Boolean);
+    const last = segments[segments.length - 1] || '';
+    return decodeURIComponent(last);
+  } catch {
+    return '';
+  }
+}
+
+
+/**
  * 生成列表 / 新建 / 单项操作的通用 handlers。
  * kind 为 'activities' 或 'posts'。
  */
@@ -202,7 +224,8 @@ export function makeContentHandlers(kind) {
     const g = await guard(request, env, { needAdmin: true });
     if (g.error) return g.error;
 
-    const id = params.id;
+    const id = resolveId(request, params);
+    if (!id) return json({ ok: false, error: '缺少条目 id' }, 400);
     const row = await g.db.prepare(`SELECT id FROM ${table} WHERE id = ?`).bind(id).first();
     if (!row) return json({ ok: false, error: '找不到这条内容' }, 404);
 
@@ -228,7 +251,8 @@ export function makeContentHandlers(kind) {
     const g = await guard(request, env, { needAdmin: true });
     if (g.error) return g.error;
 
-    const id = params.id;
+    const id = resolveId(request, params);
+    if (!id) return json({ ok: false, error: '缺少条目 id' }, 400);
     const row = await g.db.prepare(`SELECT id FROM ${table} WHERE id = ?`).bind(id).first();
     if (!row) return json({ ok: false, error: '找不到这条内容' }, 404);
 
@@ -241,10 +265,10 @@ export function makeContentHandlers(kind) {
     const g = await guard(request, env, { needAdmin: false });
     if (g.error) return g.error;
 
-    const row = await g.db
-      .prepare(`SELECT * FROM ${table} WHERE id = ?`)
-      .bind(params.id)
-      .first();
+    const id = resolveId(request, params);
+    if (!id) return json({ ok: false, error: '缺少条目 id' }, 400);
+
+    const row = await g.db.prepare(`SELECT * FROM ${table} WHERE id = ?`).bind(id).first();
 
     if (!row) return json({ ok: false, error: '找不到这条内容' }, 404);
     if (row.status !== 'published' && !g.isAdmin) {
