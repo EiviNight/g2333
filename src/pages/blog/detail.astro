@@ -1,0 +1,15 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ContentDetail from '../../components/ContentDetail.astro';
+---
+
+<BaseLayout title="文章详情" description="社团随笔与杂谈">
+  <ContentDetail
+    kind="posts"
+    backHref="/blog/"
+    backLabel="← 返回文章列表"
+    pageTitle="文章详情"
+    description="社团随笔与杂谈"
+    notFoundText="这篇文章不存在，或者还没发布。"
+  />
+</BaseLayout>

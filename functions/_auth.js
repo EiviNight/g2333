@@ -110,13 +110,37 @@ export async function requireUser(request, env) {
   return verifySession(token, env.SESSION_SECRET);
 }
 
-/** 校验登录表单凭据 */
-export function checkCredentials(env, username, password) {
-  const expectUser = env.ADMIN_USER || 'admin';
-  if (!env.ADMIN_PASSWORD) {
-    throw new Error('ADMIN_PASSWORD 未配置');
+/**
+ * 校验登录表单凭据。
+ *
+ * 顺序：先查数据库里的管理员账号（后台可自助改口令，所以这是主路径）；
+ * 库里一个账号都没有时，回退到环境变量 ADMIN_USER / ADMIN_PASSWORD，
+ * 保证「还没建账号」的阶段也能登进去创建第一个账号。
+ *
+ * 放在本文件是为了避免与 _admins.js 形成模块循环引用。
+ */
+export async function checkCredentials(env, username, password) {
+  const { findAdmin, verifyPassword } = await import('./_admins.js');
+
+  const db = dbOf(env);
+  if (db) {
+    const row = await findAdmin(env, username);
+    if (row) {
+      // 账号存在就走哈希校验，不再看环境变量
+      return verifyPassword(password || '', row);
+    }
+
+    const { results } = await db.prepare('SELECT COUNT(*) AS n FROM admin_users').all();
+    const count = results?.[0] ? Number(results[0].n) : 0;
+    if (count > 0) {
+      // 库里已有账号但没匹配上这个用户名 —— 直接拒绝，不给环境变量留后门
+      return false;
+    }
   }
-  const okUser = timingSafeEqual(username || '', expectUser);
+
+  // 兜底：还没建任何账号
+  if (!env.ADMIN_PASSWORD) return false;
+  const okUser = timingSafeEqual(username || '', env.ADMIN_USER || 'admin');
   const okPass = timingSafeEqual(password || '', env.ADMIN_PASSWORD);
   return okUser && okPass;
 }

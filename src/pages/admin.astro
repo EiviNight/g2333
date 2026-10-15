@@ -2,19 +2,19 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 // 这个页面故意不放进导航，正常访客看不到入口。
-// 页面本身是静态壳子，真正的权限判断在 Cloudflare Pages Function 里
-// （POST /api/images 会校验会话 cookie），前端隐藏只是减少干扰，不是安全边界。
+// 页面本身是静态壳子，真正的权限判断在 Cloudflare Pages Function 里 ——
+// 所有写操作的 API 都会校验会话 cookie，前端隐藏只是减少干扰，不是安全边界。
 ---
 
-<BaseLayout title="管理后台" description="作品管理">
+<BaseLayout title="管理后台" description="内容管理">
   <div class="wrap page admin">
     <header class="page-head">
       <p class="eyebrow">Admin</p>
-      <h1>作品管理</h1>
-      <p id="who" class="lede muted"></p>
+      <h1>管理后台</h1>
+      <p id="who" class="lede muted">检查登录状态…</p>
     </header>
 
-    <!-- 未登录：登录表单 -->
+    <!-- ── 未登录 ─────────────────────────────────────────── -->
     <form id="login-panel" class="card form" hidden>
       <h2>管理员登录</h2>
       <label>
@@ -25,85 +25,182 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <span>口令</span>
         <input name="password" type="password" autocomplete="current-password" required />
       </label>
-      <button class="btn btn-primary" type="submit">登录</button>
+      <div class="row">
+        <button class="btn btn-primary" type="submit">登录</button>
+      </div>
       <p id="login-status" class="status" role="status" aria-live="polite"></p>
     </form>
 
-    <!-- 已登录：上传 + 列表 -->
+    <!-- ── 已登录 ─────────────────────────────────────────── -->
     <div id="panel" hidden>
-      <form id="upload-form" class="card form">
-        <h2>上传作品</h2>
-        <label>
-          <span>标题<em>*</em></span>
-          <input name="title" type="text" maxlength="100" required />
-        </label>
-        <label>
-          <span>作者</span>
-          <input name="author" type="text" maxlength="50" placeholder="可留空" />
-        </label>
-        <label>
-          <span>图片<em>*</em></span>
-          <input name="file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required />
-        </label>
-        <label class="check">
-          <input name="approved" type="checkbox" checked />
-          <span>立刻在画廊显示（不勾就先进待审）</span>
-        </label>
-        <div class="row">
-          <button class="btn btn-primary" type="submit">上传</button>
-          <button class="btn btn-ghost" type="button" id="logout">退出登录</button>
-        </div>
-        <p id="upload-status" class="status" role="status" aria-live="polite"></p>
-      </form>
+      <nav class="tabs" role="tablist">
+        <button class="tab" data-tab="images" role="tab">作品</button>
+        <button class="tab" data-tab="activities" role="tab">活动</button>
+        <button class="tab" data-tab="posts" role="tab">文章</button>
+        <button class="tab" data-tab="account" role="tab">账号与口令</button>
+        <button class="btn-ghost tab-spacer" type="button" id="logout">退出登录</button>
+      </nav>
 
-      <section class="block">
-        <h2>全部作品</h2>
-        <p id="list-status" class="status muted">正在加载…</p>
-        <div id="list" class="list" hidden></div>
+      <!-- 作品 -->
+      <section class="tab-panel" data-panel="images" hidden>
+        <h2>上传作品</h2>
+        <form id="image-form" class="card form">
+          <label><span>标题<em>*</em></span><input name="title" type="text" maxlength="100" required /></label>
+          <label><span>作者</span><input name="author" type="text" maxlength="50" placeholder="可留空" /></label>
+          <label><span>图片<em>*</em></span><input name="file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required /></label>
+          <label><span>排序权重</span><input name="sort_order" type="number" value="0" step="1" title="数字越大越靠前" /></label>
+          <label class="check"><input name="approved" type="checkbox" checked /><span>立刻在作品展示页显示</span></label>
+          <div class="row"><button class="btn btn-primary" type="submit">上传</button></div>
+          <p id="image-status" class="status" role="status" aria-live="polite"></p>
+        </form>
+
+        <h2 class="mt">全部作品</h2>
+        <p id="image-list-status" class="status muted">加载中…</p>
+        <div id="image-list" class="list" hidden></div>
+      </section>
+
+      <!-- 活动 -->
+      <section class="tab-panel" data-panel="activities" hidden>
+        <h2 id="act-form-title">发布活动</h2>
+        <form id="activity-form" class="card form">
+          <input type="hidden" name="editing_id" value="" />
+          <label><span>标题<em>*</em></span><input name="title" type="text" maxlength="200" required /></label>
+          <div class="two-col">
+            <label><span>活动日期<em>*</em></span><input name="event_date" type="date" required /></label>
+            <label><span>地点</span><input name="location" type="text" maxlength="200" /></label>
+          </div>
+          <label><span>网址片段（留空则自动生成）</span><input name="id" type="text" maxlength="80" placeholder="如 2026-spring-camp" /></label>
+          <label><span>摘要</span><textarea name="summary" rows="2" maxlength="500"></textarea></label>
+          <label><span>正文（支持 Markdown）</span><textarea name="body" rows="12"></textarea></label>
+          <label><span>标签（逗号分隔）</span><input name="tags" type="text" placeholder="合宿,团建" /></label>
+          <label><span>封面图地址（可留空）</span><input name="cover" type="text" placeholder="/api/file/xxx.png" /></label>
+          <label><span>状态</span>
+            <select name="status">
+              <option value="published">已发布</option>
+              <option value="draft">草稿</option>
+            </select>
+          </label>
+          <div class="row">
+            <button class="btn btn-primary" type="submit">保存</button>
+            <button class="btn btn-ghost" type="button" id="act-cancel" hidden>取消编辑</button>
+          </div>
+          <p id="activity-status" class="status" role="status" aria-live="polite"></p>
+        </form>
+
+        <h2 class="mt">活动列表</h2>
+        <p id="act-list-status" class="status muted">加载中…</p>
+        <div id="act-list" class="list" hidden></div>
+      </section>
+
+      <!-- 文章 -->
+      <section class="tab-panel" data-panel="posts" hidden>
+        <h2 id="post-form-title">写文章</h2>
+        <form id="post-form" class="card form">
+          <input type="hidden" name="editing_id" value="" />
+          <label><span>标题<em>*</em></span><input name="title" type="text" maxlength="200" required /></label>
+          <div class="two-col">
+            <label><span>作者</span><input name="author" type="text" maxlength="100" /></label>
+            <label><span>标签（逗号分隔）</span><input name="tags" type="text" placeholder="随笔,观后感" /></label>
+          </div>
+          <label><span>网址片段（留空则自动生成）</span><input name="id" type="text" maxlength="80" /></label>
+          <label><span>摘要</span><textarea name="summary" rows="2" maxlength="500"></textarea></label>
+          <label><span>正文（支持 Markdown）</span><textarea name="body" rows="12"></textarea></label>
+          <label><span>封面图地址（可留空）</span><input name="cover" type="text" /></label>
+          <label><span>状态</span>
+            <select name="status">
+              <option value="published">已发布</option>
+              <option value="draft">草稿</option>
+            </select>
+          </label>
+          <div class="row">
+            <button class="btn btn-primary" type="submit">保存</button>
+            <button class="btn btn-ghost" type="button" id="post-cancel" hidden>取消编辑</button>
+          </div>
+          <p id="post-status" class="status" role="status" aria-live="polite"></p>
+        </form>
+
+        <h2 class="mt">文章列表</h2>
+        <p id="post-list-status" class="status muted">加载中…</p>
+        <div id="post-list" class="list" hidden></div>
+      </section>
+
+      <!-- 账号与口令 -->
+      <section class="tab-panel" data-panel="account" hidden>
+        <h2>修改我的口令</h2>
+        <form id="password-form" class="card form">
+          <label><span>当前口令<em>*</em></span><input name="currentPassword" type="password" autocomplete="current-password" required /></label>
+          <label><span>新口令<em>*</em></span><input name="newPassword" type="password" autocomplete="new-password" minlength="8" required /></label>
+          <label><span>再输一次新口令<em>*</em></span><input name="confirmPassword" type="password" autocomplete="new-password" minlength="8" required /></label>
+          <div class="row"><button class="btn btn-primary" type="submit">修改口令</button></div>
+          <p id="password-status" class="status" role="status" aria-live="polite"></p>
+        </form>
+
+        <h2 class="mt">管理员账号</h2>
+        <form id="admin-form" class="card form">
+          <label><span>用户名<em>*</em></span><input name="username" type="text" pattern="[A-Za-z0-9_.\-]{3,32}" required title="字母、数字、下划线、点、短横线，3-32 位" /></label>
+          <label><span>口令（至少 8 位）<em>*</em></span><input name="password" type="password" minlength="8" required /></label>
+          <div class="row"><button class="btn btn-primary" type="submit">新建账号</button></div>
+          <p id="admin-status" class="status" role="status" aria-live="polite"></p>
+        </form>
+
+        <p id="admin-list-status" class="status muted mt">加载中…</p>
+        <div id="admin-list" class="list" hidden></div>
       </section>
     </div>
   </div>
 </BaseLayout>
 
 <script>
-  type Item = {
-    id: string;
-    title: string;
-    author: string;
-    url: string;
-    status: string;
-  };
+  import { api, el, setListState, renderImageGrid, formatDate, type ImageItem } from '../lib/client';
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
 
   const loginPanel = $<HTMLFormElement>('login-panel');
-  const loginForm = $<HTMLFormElement>('login-panel');
   const loginStatus = $('login-status');
   const panel = $('panel');
   const who = $('who');
 
-  const uploadForm = $<HTMLFormElement>('upload-form');
-  const uploadStatus = $('upload-status');
-  const listEl = $('list');
-  const listStatus = $('list-status');
+  let currentUser = '';
 
-  const STATUS_LABEL: Record<string, string> = {
-    approved: '已显示',
-    pending: '待审',
-    hidden: '已隐藏',
-  };
-
-  async function api(path: string, init?: RequestInit) {
-    const res = await fetch(path, { credentials: 'same-origin', ...init });
-    const data = await res.json().catch(() => ({}));
-    return { res, data };
+  // ── 通用小工具 ──────────────────────────────────────────
+  function say(node: HTMLElement | null, text: string, state?: 'ok' | 'err' | 'pending') {
+    if (!node) return;
+    node.textContent = text;
+    if (state) node.dataset.state = state;
+    else delete node.dataset.state;
   }
 
+  function formValues(form: HTMLFormElement) {
+    const fd = new FormData(form);
+    const out: Record<string, string> = {};
+    for (const [k, v] of fd.entries()) if (typeof v === 'string') out[k] = v;
+    return out;
+  }
+
+  // ── 登录 / 登出 ─────────────────────────────────────────
+  loginPanel?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    say(loginStatus, '登录中…', 'pending');
+    const { res, data } = await api<any>('/api/login', { method: 'POST', body: new FormData(loginPanel) });
+    if (res.ok && data.ok) {
+      say(loginStatus, '');
+      showLoggedIn(data.user);
+    } else {
+      say(loginStatus, data.error || `登录失败（HTTP ${res.status}）`, 'err');
+    }
+  });
+
+  $<HTMLButtonElement>('logout')?.addEventListener('click', async () => {
+    await api('/api/logout', { method: 'POST' });
+    location.reload();
+  });
+
   function showLoggedIn(user: string) {
+    currentUser = user;
     if (loginPanel) loginPanel.hidden = true;
     if (panel) panel.hidden = false;
     if (who) who.textContent = `已登录：${user}`;
-    loadList();
+    switchTab('images');
   }
 
   function showLoggedOut() {
@@ -112,154 +209,452 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     if (who) who.textContent = '需要管理员登录';
   }
 
-  // ---- 登录 ----
-  if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!loginStatus) return;
-      loginStatus.textContent = '登录中…';
-      loginStatus.dataset.state = 'pending';
+  // ── 标签页 ──────────────────────────────────────────────
+  const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.tab'));
+  const panels = Array.from(document.querySelectorAll<HTMLElement>('.tab-panel'));
 
-      const { res, data } = await api('/api/login', {
-        method: 'POST',
-        body: new FormData(loginForm),
-      });
+  function switchTab(name: string) {
+    for (const t of tabs) {
+      const on = t.dataset.tab === name;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', String(on));
+    }
+    for (const p of panels) p.hidden = p.dataset.panel !== name;
 
-      if (res.ok && data.ok) {
-        loginStatus.textContent = '';
-        showLoggedIn(data.user);
-      } else {
-        loginStatus.textContent = data.error || `登录失败（HTTP ${res.status}）`;
-        loginStatus.dataset.state = 'err';
-      }
-    });
+    if (name === 'images') loadImages();
+    if (name === 'activities') loadActivities();
+    if (name === 'posts') loadPosts();
+    if (name === 'account') loadAdmins();
   }
 
-  // ---- 退出 ----
-  const logoutBtn = $<HTMLButtonElement>('logout');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await api('/api/logout', { method: 'POST' });
-      location.reload();
-    });
+  for (const t of tabs) t.addEventListener('click', () => switchTab(t.dataset.tab!));
+
+  // ── 作品 ────────────────────────────────────────────────
+  const imageForm = $<HTMLFormElement>('image-form');
+  const imageStatus = $('image-status');
+
+  imageForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(imageForm);
+    if (!fd.get('approved')) fd.delete('approved');
+    else fd.set('status', 'approved');
+    say(imageStatus, '上传中…', 'pending');
+    const { res, data } = await api<any>('/api/images', { method: 'POST', body: fd });
+    if (res.ok && data.ok) {
+      say(imageStatus, `已上传：${data.item.title}`, 'ok');
+      imageForm.reset();
+      const cb = imageForm.querySelector<HTMLInputElement>('input[name="approved"]');
+      if (cb) cb.checked = true;
+      loadImages();
+    } else {
+      say(imageStatus, data.error || `上传失败（HTTP ${res.status}）`, 'err');
+    }
+  });
+
+  async function loadImages() {
+    const list = $('image-list');
+    const status = $('image-list-status');
+    if (!list || !status) return;
+    setListState(status, '加载中…', 'pending');
+
+    const { res, data } = await api<any>('/api/images');
+    if (!res.ok || !data.ok) {
+      say(status, data.error || `读取失败（HTTP ${res.status}）`, 'err');
+      return;
+    }
+    if (data.items.length === 0) {
+      say(status, '还没有作品。');
+      list.hidden = true;
+      return;
+    }
+
+    status.hidden = true;
+    list.hidden = false;
+    list.replaceChildren();
+    for (const item of data.items as ImageItem[]) {
+      list.append(await imageRow(item));
+    }
   }
 
-  // ---- 上传 ----
-  if (uploadForm) {
-    uploadForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!uploadStatus) return;
+  async function imageRow(item: ImageItem) {
+    const row = el('div', 'row-item');
 
-      const fd = new FormData(uploadForm);
-      if (!fd.get('approved')) fd.delete('approved');
-      else fd.set('status', 'approved');
-
-      uploadStatus.textContent = '上传中…';
-      uploadStatus.dataset.state = 'pending';
-
-      const { res, data } = await api('/api/images', { method: 'POST', body: fd });
-
-      if (res.ok && data.ok) {
-        uploadStatus.textContent = `已上传：${data.item.title}`;
-        uploadStatus.dataset.state = 'ok';
-        uploadForm.reset();
-        const cb = uploadForm.querySelector<HTMLInputElement>('input[name="approved"]');
-        if (cb) cb.checked = true;
-        loadList();
-      } else {
-        uploadStatus.textContent = data.error || `上传失败（HTTP ${res.status}）`;
-        uploadStatus.dataset.state = 'err';
-      }
-    });
-  }
-
-  // ---- 列表 ----
-  function row(item: Item) {
-    const el = document.createElement('div');
-    el.className = 'row-item';
-
-    const img = document.createElement('img');
+    const img = el('img');
     img.src = item.url;
     img.alt = item.title;
     img.loading = 'lazy';
 
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    const title = document.createElement('strong');
-    title.textContent = item.title;
-    const sub = document.createElement('span');
-    sub.className = 'muted';
-    sub.textContent = `${item.author || '未署名'} · ${STATUS_LABEL[item.status] || item.status}`;
-    meta.append(title, sub);
+    const meta = el('div', 'meta');
+    meta.append(el('strong', undefined, item.title));
+    meta.append(
+      el(
+        'span',
+        'muted',
+        `${item.author || '未署名'} · ${item.status === 'approved' ? '已显示' : item.status === 'pending' ? '待审' : '已隐藏'}`,
+      ),
+    );
 
-    const actions = document.createElement('div');
-    actions.className = 'actions';
+    const actions = el('div', 'actions');
+    actions.append(
+      ...(await Promise.all([
+        actionButton(item.status === 'approved' ? '隐藏' : '显示', async () => {
+          const next = item.status === 'approved' ? 'hidden' : 'approved';
+          const r = await api(`/api/images/${encodeURIComponent(item.id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: next, sort_order: (item as any).sort_order ?? 0 }),
+          });
+          if (r.res.ok) loadImages();
+          else alert((r.data as any).error || '操作失败');
+        }),
+        actionButton('置顶', async () => {
+          const r = await api(`/api/images/${encodeURIComponent(item.id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sort_order: 999 }),
+          });
+          if (r.res.ok) loadImages();
+          else alert((r.data as any).error || '操作失败');
+        }),
+        actionButton('删除', async () => {
+          if (!confirm(`确定删除「${item.title}」？图片文件会一起删掉。`)) return;
+          const r = await api(`/api/images/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+          if (r.res.ok) loadImages();
+          else alert((r.data as any).error || '删除失败');
+        }, 'danger'),
+      ])),
+    );
 
-    const toggle = document.createElement('button');
-    toggle.className = 'btn btn-ghost btn-sm';
-    toggle.type = 'button';
-    const visible = item.status === 'approved';
-    toggle.textContent = visible ? '隐藏' : '显示';
-    toggle.addEventListener('click', async () => {
-      toggle.disabled = true;
-      const { res, data } = await api(`/api/images/${encodeURIComponent(item.id)}`, {
-        method: 'PATCH',
+    row.append(img, meta, actions);
+    return row;
+  }
+
+  function actionButton(label: string, onClick: () => Promise<void>, extra = '') {
+    const b = el('button', `btn btn-ghost btn-sm ${extra}`.trim(), label);
+    b.type = 'button';
+    b.addEventListener('click', async () => {
+      b.disabled = true;
+      try {
+        await onClick();
+      } finally {
+        b.disabled = false;
+      }
+    });
+    return b;
+  }
+
+  // ── 活动 / 文章（结构相同，共用一套逻辑）────────────────
+  type Kind = 'activities' | 'posts';
+
+  const KIND_CFG: Record<Kind, { form: string; status: string; list: string; listStatus: string; label: string }> = {
+    activities: {
+      form: 'activity-form',
+      status: 'activity-status',
+      list: 'act-list',
+      listStatus: 'act-list-status',
+      label: '活动',
+    },
+    posts: {
+      form: 'post-form',
+      status: 'post-status',
+      list: 'post-list',
+      listStatus: 'post-list-status',
+      label: '文章',
+    },
+  };
+
+  function wireContentForm(kind: Kind) {
+    const cfg = KIND_CFG[kind];
+    const form = $<HTMLFormElement>(cfg.form);
+    const status = $(cfg.status);
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const values = formValues(form);
+      const editingId = values.editing_id;
+      delete values.editing_id;
+
+      // 空字符串的封面/标签等交给后端处理，这里只清理空的可选字段
+      const payload: Record<string, string> = {};
+      for (const [k, v] of Object.entries(values)) {
+        if (v !== '' || k === 'summary' || k === 'body') payload[k] = v;
+      }
+
+      say(status, '保存中…', 'pending');
+
+      const path = editingId ? `/api/${kind}/${encodeURIComponent(editingId)}` : `/api/${kind}`;
+      const method = editingId ? 'PATCH' : 'POST';
+      if (!editingId && !payload.id) delete payload.id;
+
+      const { res, data } = await api<any>(path, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: visible ? 'hidden' : 'approved' }),
+        body: JSON.stringify(payload),
       });
-      toggle.disabled = false;
-      if (res.ok && data.ok) loadList();
-      else alert(data.error || '操作失败');
+
+      if (res.ok && data.ok) {
+        say(status, editingId ? '已更新' : `已发布：${payload.title}`, 'ok');
+        resetContentForm(kind);
+        loadContentList(kind);
+      } else {
+        say(status, data.error || `保存失败（HTTP ${res.status}）`, 'err');
+      }
     });
 
-    const del = document.createElement('button');
-    del.className = 'btn btn-ghost btn-sm danger';
-    del.type = 'button';
-    del.textContent = '删除';
-    del.addEventListener('click', async () => {
-      if (!confirm(`确定删除「${item.title}」？图片文件会一起删掉。`)) return;
-      del.disabled = true;
-      const { res, data } = await api(`/api/images/${encodeURIComponent(item.id)}`, {
-        method: 'DELETE',
-      });
-      del.disabled = false;
-      if (res.ok && data.ok) loadList();
-      else alert(data.error || '删除失败');
-    });
-
-    actions.append(toggle, del);
-    el.append(img, meta, actions);
-    return el;
+    const cancel = $(kind === 'activities' ? 'act-cancel' : 'post-cancel');
+    cancel?.addEventListener('click', () => resetContentForm(kind));
   }
 
-  async function loadList() {
-    if (!listEl || !listStatus) return;
-    listStatus.hidden = false;
-    listStatus.textContent = '正在加载…';
-    listEl.hidden = true;
-    listEl.replaceChildren();
+  function resetContentForm(kind: Kind) {
+    const cfg = KIND_CFG[kind];
+    const form = $<HTMLFormElement>(cfg.form);
+    if (!form) return;
+    form.reset();
+    const editing = form.querySelector<HTMLInputElement>('input[name="editing_id"]');
+    if (editing) editing.value = '';
+    const title = $(kind === 'activities' ? 'act-form-title' : 'post-form-title');
+    if (title) title.textContent = kind === 'activities' ? '发布活动' : '写文章';
+    const cancel = $(kind === 'activities' ? 'act-cancel' : 'post-cancel');
+    if (cancel) cancel.hidden = true;
+  }
 
-    const { res, data } = await api('/api/images');
+  function startEdit(kind: Kind, item: any) {
+    const cfg = KIND_CFG[kind];
+    const form = $<HTMLFormElement>(cfg.form);
+    if (!form) return;
+
+    const editing = form.querySelector<HTMLInputElement>('input[name="editing_id"]');
+    if (editing) editing.value = item.id;
+
+    const set = (name: string, value: any) => {
+      const node = form.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+        `[name="${name}"]`,
+      );
+      if (!node) return;
+      node.value = value ?? '';
+    };
+
+    set('title', item.title);
+    set('id', item.id);
+    set('summary', item.summary);
+    set('body', item.body);
+    set('tags', item.tags);
+    set('cover', item.cover);
+    set('status', item.status);
+    if (kind === 'activities') {
+      set('event_date', item.event_date);
+      set('location', item.location);
+    } else {
+      set('author', item.author);
+    }
+
+    const title = $(kind === 'activities' ? 'act-form-title' : 'post-form-title');
+    if (title) title.textContent = `编辑${cfg.label}：${item.title}`;
+    const cancel = $(kind === 'activities' ? 'act-cancel' : 'post-cancel');
+    if (cancel) cancel.hidden = false;
+
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function loadContentList(kind: Kind) {
+    const cfg = KIND_CFG[kind];
+    const list = $(cfg.list);
+    const status = $(cfg.listStatus);
+    if (!list || !status) return;
+
+    setListState(status, '加载中…', 'pending');
+    const { res, data } = await api<any>(`/api/${kind}`);
     if (!res.ok || !data.ok) {
-      listStatus.textContent = data.error || `读取失败（HTTP ${res.status}）`;
-      listStatus.dataset.state = 'err';
+      say(status, data.error || `读取失败（HTTP ${res.status}）`, 'err');
       return;
     }
-
     if (data.items.length === 0) {
-      listStatus.textContent = '还没有作品。';
+      say(status, '还没有内容。');
+      list.hidden = true;
       return;
     }
 
-    listStatus.hidden = true;
-    listEl.hidden = false;
-    for (const item of data.items) listEl.append(row(item));
+    status.hidden = true;
+    list.hidden = false;
+    list.replaceChildren();
+
+    for (const item of data.items) {
+      const row = el('div', 'row-item');
+
+      const meta = el('div', 'meta');
+      meta.append(el('strong', undefined, item.title));
+      const dateText =
+        kind === 'activities' ? formatDate(item.event_date) : formatDate(item.created_at);
+      meta.append(
+        el('span', 'muted', `${dateText} · ${item.status === 'published' ? '已发布' : '草稿'}`),
+      );
+
+      const actions = el('div', 'actions');
+      actions.append(
+        actionButton('编辑', async () => startEdit(kind, item)),
+        actionButton(item.status === 'published' ? '转草稿' : '发布', async () => {
+          const next = item.status === 'published' ? 'draft' : 'published';
+          const r = await api(`/api/${kind}/${encodeURIComponent(item.id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: next }),
+          });
+          if (r.res.ok) loadContentList(kind);
+          else alert((r.data as any).error || '操作失败');
+        }),
+        actionButton(
+          '删除',
+          async () => {
+            if (!confirm(`确定删除「${item.title}」？`)) return;
+            const r = await api(`/api/${kind}/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+            if (r.res.ok) loadContentList(kind);
+            else alert((r.data as any).error || '删除失败');
+          },
+          'danger',
+        ),
+      );
+
+      row.append(meta, actions);
+      list.append(row);
+    }
   }
 
-  // ---- 启动：先问服务端当前登录状态 ----
+  const loadActivities = () => loadContentList('activities');
+  const loadPosts = () => loadContentList('posts');
+
+  wireContentForm('activities');
+  wireContentForm('posts');
+
+  // ── 账号与口令 ──────────────────────────────────────────
+  const passwordForm = $<HTMLFormElement>('password-form');
+  const passwordStatus = $('password-status');
+
+  passwordForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const v = formValues(passwordForm);
+    if (v.newPassword !== v.confirmPassword) {
+      say(passwordStatus, '两次输入的新口令不一致', 'err');
+      return;
+    }
+    say(passwordStatus, '提交中…', 'pending');
+
+    const { res, data } = await api<any>('/api/password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword: v.currentPassword, newPassword: v.newPassword }),
+    });
+
+    if (res.ok && data.ok) {
+      say(passwordStatus, '口令已修改，请用新口令重新登录…', 'ok');
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      say(passwordStatus, data.error || `修改失败（HTTP ${res.status}）`, 'err');
+    }
+  });
+
+  const adminForm = $<HTMLFormElement>('admin-form');
+  const adminStatus = $('admin-status');
+
+  adminForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const v = formValues(adminForm);
+    say(adminStatus, '创建中…', 'pending');
+    const { res, data } = await api<any>('/api/admins', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: v.username, password: v.password }),
+    });
+    if (res.ok && data.ok) {
+      say(adminStatus, `已创建账号：${v.username}`, 'ok');
+      adminForm.reset();
+      loadAdmins();
+    } else {
+      say(adminStatus, data.error || `创建失败（HTTP ${res.status}）`, 'err');
+    }
+  });
+
+  async function loadAdmins() {
+    const list = $('admin-list');
+    const status = $('admin-list-status');
+    if (!list || !status) return;
+
+    setListState(status, '加载中…', 'pending');
+    const { res, data } = await api<any>('/api/admins');
+    if (!res.ok || !data.ok) {
+      say(status, data.error || `读取失败（HTTP ${res.status}）`, 'err');
+      return;
+    }
+    currentUser = data.currentUser || currentUser;
+
+    status.hidden = true;
+    list.hidden = false;
+    list.replaceChildren();
+
+    for (const a of data.admins) {
+      const row = el('div', 'row-item');
+      const meta = el('div', 'meta');
+      const name = el('strong', undefined, a.username);
+      if (a.username === currentUser) name.append(el('span', 'badge', '当前登录'));
+      meta.append(name);
+      meta.append(
+        el(
+          'span',
+          'muted',
+          a.password_changed_at ? `口令更新于 ${formatDate(a.password_changed_at)}` : '尚未改过口令',
+        ),
+      );
+
+      const actions = el('div', 'actions');
+      actions.append(
+        actionButton('改口令', async () => {
+          const next = prompt(`给「${a.username}」设置新口令（至少 8 位）`);
+          if (!next) return;
+          if (next.length < 8) {
+            alert('口令至少 8 位');
+            return;
+          }
+          const r = await api(`/api/admins/${encodeURIComponent(a.username)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: next }),
+          });
+          if (r.res.ok) {
+            alert('已更新');
+            loadAdmins();
+          } else {
+            alert((r.data as any).error || '更新失败');
+          }
+        }),
+      );
+
+      if (a.username !== currentUser) {
+        actions.append(
+          actionButton(
+            '删除',
+            async () => {
+              if (!confirm(`确定删除账号「${a.username}」？`)) return;
+              const r = await api(`/api/admins/${encodeURIComponent(a.username)}`, {
+                method: 'DELETE',
+              });
+              if (r.res.ok) loadAdmins();
+              else alert((r.data as any).error || '删除失败');
+            },
+            'danger',
+          ),
+        );
+      }
+
+      row.append(meta, actions);
+      list.append(row);
+    }
+  }
+
+  // ── 启动 ────────────────────────────────────────────────
   (async () => {
-    const { res, data } = await api('/api/session');
+    const { res, data } = await api<any>('/api/session');
     if (res.ok && data.loggedIn) showLoggedIn(data.user);
+    else if (!res.ok) say(who, data.error || '服务端未配置好', 'err');
     else showLoggedOut();
   })();
 </script>
@@ -268,8 +663,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   .admin .form {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    max-width: 520px;
+    gap: 15px;
+    max-width: 720px;
   }
 
   .admin .form h2 {
@@ -309,7 +704,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   }
 
   .admin input,
-  .admin select {
+  .admin select,
+  .admin textarea {
     font: inherit;
     color: var(--text);
     background: var(--bg-soft);
@@ -319,16 +715,32 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     width: 100%;
   }
 
-  .admin input[type='file'] {
-    padding: 8px;
+  .admin textarea {
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.88rem;
+    line-height: 1.6;
   }
 
-  .admin input:focus {
+  .admin input:focus,
+  .admin select:focus,
+  .admin textarea:focus {
     border-color: var(--accent);
     outline: none;
   }
 
-  .admin .row {
+  .two-col {
+    display: grid;
+    gap: 15px;
+  }
+
+  @media (min-width: 640px) {
+    .two-col {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .row {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
@@ -350,17 +762,57 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     color: var(--muted);
   }
 
-  .block {
-    margin-top: 44px;
-  }
-
-  .block h2 {
-    font-size: 1.2rem;
-    margin-bottom: 16px;
-    padding-bottom: 10px;
+  /* 标签页 */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    padding-bottom: 14px;
+    margin-bottom: 26px;
     border-bottom: 1px solid var(--line);
   }
 
+  .tab {
+    font: inherit;
+    font-size: 0.92rem;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 7px 15px;
+    cursor: pointer;
+  }
+
+  .tab:hover {
+    color: var(--text);
+    background: var(--bg-soft);
+  }
+
+  .tab.active {
+    color: var(--text);
+    background: var(--card);
+    border-color: var(--line);
+  }
+
+  .tab-spacer {
+    margin-left: auto;
+    font-size: 0.88rem;
+    padding: 7px 14px;
+  }
+
+  .tab-panel h2 {
+    font-size: 1.2rem;
+    margin: 0 0 16px;
+  }
+
+  .tab-panel h2.mt {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* 列表行 */
   .list {
     display: flex;
     flex-direction: column;
@@ -371,7 +823,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 12px;
+    padding: 12px 14px;
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -408,6 +860,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     display: flex;
     gap: 8px;
     flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    color: var(--accent);
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    padding: 1px 8px;
+    margin-left: 6px;
+    vertical-align: middle;
   }
 
   .btn-sm {

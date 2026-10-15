@@ -1,0 +1,15 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ContentDetail from '../../components/ContentDetail.astro';
+---
+
+<BaseLayout title="活动详情" description="社团活动记录">
+  <ContentDetail
+    kind="activities"
+    backHref="/activities/"
+    backLabel="← 返回社团活动"
+    pageTitle="活动详情"
+    description="社团活动记录"
+    notFoundText="这条活动不存在，或者还没发布。"
+  />
+</BaseLayout>

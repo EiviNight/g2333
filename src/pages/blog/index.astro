@@ -1,0 +1,59 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="文章" description="社团随笔与杂谈">
+  <div class="wrap page">
+    <header class="page-head">
+      <p class="eyebrow">Posts</p>
+      <h1>文章</h1>
+      <p class="lede">社团成员写的随笔、杂谈、以及一些看完想说的话。</p>
+    </header>
+
+    <p id="list-status" class="status muted">正在加载…</p>
+    <p id="list-empty" class="muted" hidden>还没有文章。</p>
+    <div id="list" class="grid list" hidden></div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { api, renderContentList, setListState, type ContentItem } from '../../lib/client';
+
+  const list = document.getElementById('list')!;
+  const status = document.getElementById('list-status');
+  const empty = document.getElementById('list-empty')!;
+
+  (async () => {
+    setListState(status, '正在加载…', 'pending');
+    try {
+      const { res, data } = await api<{ ok: boolean; items: ContentItem[]; error?: string }>(
+        '/api/posts',
+      );
+      if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+      if (status) status.hidden = true;
+      if (data.items.length === 0) {
+        empty.hidden = false;
+        return;
+      }
+      renderContentList(list, data.items, '/blog/detail/');
+    } catch (err) {
+      setListState(status, '文章列表读不出来，稍后刷新试试。', 'err');
+      console.error(err);
+    }
+  })();
+</script>
+
+<style>
+  .status {
+    font-size: 0.95rem;
+  }
+
+  .status[data-state='err'] {
+    color: #fbbf24;
+  }
+
+  .list {
+    gap: 16px;
+  }
+</style>

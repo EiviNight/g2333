@@ -1,5 +1,8 @@
 // POST /api/login  登录
 // 表单：username, password
+//
+// 口令校验顺序见 _auth.js 的 checkCredentials：
+// 数据库管理员账号优先，库里没有账号时才回退到环境变量。
 import { checkCredentials, createSession, sessionCookie, json } from '../_auth.js';
 
 export async function onRequestPost({ request, env }) {
@@ -19,7 +22,7 @@ export async function onRequestPost({ request, env }) {
 
   let ok;
   try {
-    ok = checkCredentials(env, username, password);
+    ok = await checkCredentials(env, username, password);
   } catch (err) {
     return json({ ok: false, error: `服务端未配置好：${err.message}` }, 500);
   }
@@ -29,8 +32,8 @@ export async function onRequestPost({ request, env }) {
     return json({ ok: false, error: '用户名或口令不对' }, 401);
   }
 
-  const token = await createSession(env.ADMIN_USER || 'admin', env.SESSION_SECRET);
-  return new Response(JSON.stringify({ ok: true, user: env.ADMIN_USER || 'admin' }), {
+  const token = await createSession(username, env.SESSION_SECRET);
+  return new Response(JSON.stringify({ ok: true, user: username }), {
     status: 200,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',

@@ -55,6 +55,13 @@ export async function onRequestPatch({ request, env, params }) {
     values.push(body.status);
   }
 
+  if (body.sort_order !== undefined) {
+    const n = Number(body.sort_order);
+    if (!Number.isFinite(n)) return json({ ok: false, error: '排序权重必须是数字' }, 400);
+    sets.push('sort_order = ?');
+    values.push(Math.trunc(n));
+  }
+
   if (sets.length === 0) return json({ ok: false, error: '没有要改的字段' }, 400);
 
   values.push(id);

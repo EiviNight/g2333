@@ -1,0 +1,248 @@
+---
+/**
+ * 活动 / 文章的详情页（浏览器端渲染）。
+ *
+ * 为什么用查询参数而不是好看的路径：
+ *   站点是静态构建，Astro 无法为「存在数据库里的内容」生成路由，
+ *   而运行时渲染又需要装适配器把整站变成 SSR。
+ *   两害相权，选择保持纯静态 + `?id=xxx` 的形式，零架构改动。
+ *
+ * 内容由 /api/<kind>/<id> 提供，正文的 Markdown 已在服务端渲染成 body_html。
+ */
+interface Props {
+  /** 'activities' 或 'posts' */
+  kind: 'activities' | 'posts';
+  /** 列表页路径，用于「返回」链接 */
+  backHref: string;
+  backLabel: string;
+  pageTitle: string;
+  description: string;
+  /** 找不到内容时的提示语 */
+  notFoundText: string;
+}
+
+const { kind, backHref, backLabel, pageTitle, description, notFoundText } = Astro.props;
+---
+
+<div
+  class="wrap page"
+  id="detail"
+  data-kind={kind}
+  data-back-href={backHref}
+  data-back-label={backLabel}
+  data-notfound={notFoundText}
+>
+  <a class="back" href={backHref} id="detail-back">{backLabel}</a>
+
+  <p id="detail-status" class="status muted">正在加载…</p>
+
+  <article id="detail-article" hidden>
+    <header class="page-head">
+      <p class="eyebrow" id="detail-date"></p>
+      <h1 id="detail-title"></h1>
+      <p class="lede" id="detail-summary"></p>
+      <ul class="meta" id="detail-meta"></ul>
+    </header>
+    <div class="prose" id="detail-body"></div>
+  </article>
+
+  <p id="detail-notfound" class="muted" hidden>{notFoundText}</p>
+</div>
+
+<script>
+  import { api, formatDate, splitTags, el, setListState } from '../lib/client';
+
+  const root = document.getElementById('detail');
+  if (root) {
+    const kind = root.dataset.kind!;
+    const backHref = root.dataset.backHref || '/';
+    const backLabel = root.dataset.backLabel || '← 返回';
+
+    // 网址片段从查询参数读：/activities/detail/?id=2026-spring-camp
+    const id = new URLSearchParams(window.location.search).get('id') || '';
+
+    const status = document.getElementById('detail-status');
+    const article = document.getElementById('detail-article')!;
+    const dateEl = document.getElementById('detail-date')!;
+    const titleEl = document.getElementById('detail-title')!;
+    const summaryEl = document.getElementById('detail-summary')!;
+    const metaEl = document.getElementById('detail-meta')!;
+    const bodyEl = document.getElementById('detail-body')!;
+    const notFound = document.getElementById('detail-notfound')!;
+    const back = document.getElementById('detail-back') as HTMLAnchorElement | null;
+
+    // 「返回」保留来路，避免从列表翻到第 3 页再退回来又回到顶部
+    if (back) {
+      back.href = backHref;
+      back.textContent = backLabel;
+    }
+
+    async function load() {
+      if (!id) {
+        if (status) status.hidden = true;
+        notFound.hidden = false;
+        return;
+      }
+
+      try {
+        const { res, data } = await api<any>(`/api/${kind}/${encodeURIComponent(id)}`);
+
+        if (!res.ok || !data?.ok) {
+          if (status) status.hidden = true;
+          notFound.hidden = false;
+          return;
+        }
+
+        const item = data.item;
+        document.title = `${item.title} · G2333 动漫社`;
+
+        if (status) status.hidden = true;
+        dateEl.textContent = item.event_date
+          ? formatDate(item.event_date)
+          : formatDate(item.created_at);
+        titleEl.textContent = item.title;
+
+        if (item.summary) {
+          summaryEl.textContent = item.summary;
+        } else {
+          summaryEl.hidden = true;
+        }
+
+        for (const t of [item.location, item.author, ...splitTags(item.tags)].filter(Boolean)) {
+          metaEl.append(el('li', undefined, t));
+        }
+        if (!metaEl.children.length) metaEl.hidden = true;
+
+        // 正文的 Markdown 已由服务端渲染成 HTML；失败时退化成纯文本
+        if (item.body_html) {
+          bodyEl.innerHTML = item.body_html;
+        } else {
+          bodyEl.append(el('pre', 'plain', item.body || ''));
+        }
+
+        article.hidden = false;
+      } catch (err) {
+        setListState(status, '内容读不出来，稍后刷新试试。', 'err');
+        console.error(err);
+      }
+    }
+
+    load();
+  }
+</script>
+
+<style>
+  .back {
+    display: inline-block;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-bottom: 22px;
+  }
+
+  .back:hover {
+    color: var(--accent);
+  }
+
+  .status {
+    font-size: 0.95rem;
+  }
+
+  .status[data-state='err'] {
+    color: #fbbf24;
+  }
+
+  .meta {
+    display: flex;
+    gap: 10px;
+    list-style: none;
+    padding: 0;
+    margin: 18px 0 0;
+    flex-wrap: wrap;
+  }
+
+  .meta li {
+    font-size: 0.78rem;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px 11px;
+  }
+
+  .prose {
+    max-width: 68ch;
+  }
+
+  .prose :global(h2) {
+    margin: 36px 0 12px;
+    font-size: 1.25rem;
+  }
+  .prose :global(h2:first-child) {
+    margin-top: 0;
+  }
+  .prose :global(h3) {
+    margin: 28px 0 10px;
+    font-size: 1.08rem;
+  }
+  .prose :global(p) {
+    margin: 0 0 16px;
+  }
+  .prose :global(ul),
+  .prose :global(ol) {
+    padding-left: 1.2em;
+    margin: 0 0 16px;
+  }
+  .prose :global(li) {
+    margin-bottom: 6px;
+  }
+  .prose :global(li)::marker {
+    color: var(--accent);
+  }
+  .prose :global(a) {
+    color: var(--accent);
+  }
+  .prose :global(code) {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.88em;
+  }
+  .prose :global(pre) {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: 0.88rem;
+  }
+  .prose :global(pre code) {
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  .prose :global(img) {
+    border-radius: 9px;
+    margin: 8px 0 16px;
+  }
+  .prose :global(strong) {
+    color: #fff;
+  }
+  .prose :global(blockquote) {
+    margin: 0 0 16px;
+    padding-left: 16px;
+    border-left: 3px solid var(--line);
+    color: var(--muted);
+  }
+  .prose :global(hr) {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 28px 0;
+  }
+
+  .plain {
+    white-space: pre-wrap;
+    font-family: inherit;
+    color: var(--muted);
+  }
+</style>
