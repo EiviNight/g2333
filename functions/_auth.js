@@ -132,8 +132,14 @@ export const json = (data, status = 200) =>
 // 免得 dashboard 里填成 g2333_db 而代码找 DB，结果整个功能卡住。
 // 优先用官方文档风格的大写名。
 
-const BUCKET_NAMES = ['GALLERY_BUCKET', 'g2333_gallery', 'GALLERY', 'BUCKET'];
-const DB_NAMES = ['DB', 'g2333_db', 'DATABASE'];
+const BUCKET_NAMES = [
+  'GALLERY_BUCKET',
+  'g2333_gallery',
+  'g2333-gallery',
+  'GALLERY',
+  'BUCKET',
+];
+const DB_NAMES = ['DB', 'g2333_db', 'g2333-db', 'DATABASE'];
 
 /** 取 R2 桶绑定，没有则返回 null */
 export function bucketOf(env) {
