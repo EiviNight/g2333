@@ -126,3 +126,27 @@ export const json = (data, status = 200) =>
     status,
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
   });
+
+// ── 绑定名解析 ────────────────────────────────────────────────
+// Cloudflare 的绑定名由创建时决定，大小写敏感。这里两种常见写法都认，
+// 免得 dashboard 里填成 g2333_db 而代码找 DB，结果整个功能卡住。
+// 优先用官方文档风格的大写名。
+
+const BUCKET_NAMES = ['GALLERY_BUCKET', 'g2333_gallery', 'GALLERY', 'BUCKET'];
+const DB_NAMES = ['DB', 'g2333_db', 'DATABASE'];
+
+/** 取 R2 桶绑定，没有则返回 null */
+export function bucketOf(env) {
+  for (const name of BUCKET_NAMES) {
+    if (env[name]) return env[name];
+  }
+  return null;
+}
+
+/** 取 D1 绑定，没有则返回 null */
+export function dbOf(env) {
+  for (const name of DB_NAMES) {
+    if (env[name]) return env[name];
+  }
+  return null;
+}

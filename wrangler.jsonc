@@ -1,15 +1,30 @@
 {
-  // 这是 Cloudflare Workers 那份「备份站」，不是主站。
-  // 主站是 Pages 项目 g2333 -> https://g2333.pages.dev
-  //
-  // 名字带 -backup 是故意的：Workers 叫 g2333 会和同账号的 Pages 项目 g2333
-  // 抢 g2333.<子域>.workers.dev 这个域名，导致部署失败。改名后各占一个。
-  "name": "g2333-backup",
-  "compatibility_date": "2026-10-14",
-  "assets": {
-    // Astro 静态站的构建产物目录
-    "directory": "./dist",
-    // 找不到路径时用 dist/404.html（由 src/pages/404.astro 生成）
-    "not_found_handling": "404-page"
-  }
+	// 这是 Cloudflare Workers 那份「备份站」，不是主站。
+	// 主站是 Pages 项目 g2333 -> https://g2333.pages.dev
+	//
+	// 名字带 -backup 是故意的：Workers 叫 g2333 会和同账号的 Pages 项目 g2333
+	// 抢 g2333.<子域>.workers.dev 这个域名，导致部署失败。改名后各占一个。
+	"name": "g2333-backup",
+	"compatibility_date": "2026-10-14",
+	"assets": {
+		// Astro 静态站的构建产物目录
+		"directory": "./dist",
+		// 找不到路径时用 dist/404.html（由 src/pages/404.astro 生成）
+		"not_found_handling": "404-page"
+	},
+	"r2_buckets": [
+		{
+			"bucket_name": "g2333-gallery",
+			"binding": "g2333_gallery",
+			"remote": true
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "g2333_db",
+			"database_name": "g2333-db",
+			"database_id": "be27e3de-6338-4ff6-aeeb-a1d7cef55dea",
+			"remote": true
+		}
+	]
 }

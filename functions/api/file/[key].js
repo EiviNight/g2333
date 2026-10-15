@@ -4,7 +4,7 @@
 // 走这里读，好处是「不用配任何 R2 公开域名就能直接用」。
 // 如果你以后在 R2 配了公开域名，把它填进环境变量 R2_PUBLIC_BASE，
 // 前端就会直接指向那个域名，图片不再经过本 Function（更快、不耗请求额度）。
-import { json } from '../../_auth.js';
+import { json, bucketOf } from '../../_auth.js';
 
 const TYPES = {
   jpg: 'image/jpeg',
@@ -15,7 +15,8 @@ const TYPES = {
 };
 
 export async function onRequestGet({ env, params }) {
-  if (!env.GALLERY_BUCKET) return json({ ok: false, error: 'R2 未绑定' }, 500);
+  const bucket = bucketOf(env);
+  if (!bucket) return json({ ok: false, error: 'R2 未绑定（变量名建议用 GALLERY_BUCKET）' }, 500);
 
   const key = params.key;
   // 只允许「时间戳-随机串.扩展名」这种形式，挡住 ../ 之类的路径穿越
@@ -23,7 +24,7 @@ export async function onRequestGet({ env, params }) {
     return new Response('Bad request', { status: 400 });
   }
 
-  const object = await env.GALLERY_BUCKET.get(key);
+  const object = await bucket.get(key);
   if (!object) return new Response('Not found', { status: 404 });
 
   const ext = key.split('.').pop().toLowerCase();
