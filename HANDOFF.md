@@ -2,7 +2,7 @@
 
 ## 项目定位
 
-社团官网。对外三块内容：**首页、社团活动、作品展示**（另有文章与招新页）。
+社团官网。对外三块内容：**首页、社团活动、作品展示**（另有文章页）。
 内容由管理员在后台维护，发布后立刻在线上可见，不需要重新部署。
 
 受众主要是**中国大陆**的社团成员，所以主站选在 Cloudflare Pages（`pages.dev` 国内直连可用）。
@@ -69,7 +69,6 @@ src/
   pages/activities/               社团活动（列表 index + 详情 detail）
   pages/blog/                     文章（列表 index + 详情 detail）
   pages/gallery.astro             作品展示
-  pages/join.astro                招新页
   pages/admin.astro               管理后台（四个标签页）
   pages/404.astro                 自定义 404
 public/gallery/*.svg              画廊常设占位图
@@ -152,7 +151,7 @@ npx wrangler d1 execute g2333-db --remote --file=./schema.sql
 ## 当前状态与待办
 
 **已完成**：首页、社团活动（列表+详情）、文章（列表+详情）、作品展示、
-招新页、自定义 404、管理员登录、活动/文章/作品的后台增删改、管理员自助改口令。
+自定义 404、管理员登录、活动/文章/作品的后台增删改、管理员自助改口令。
 
 **占位内容，需要替换**：
 - `src/config.ts` 里的联系方式是假的（`qq: '123456789'`、`email: 'hello@example.com'`、B 站链接全 0）
@@ -164,5 +163,4 @@ npx wrangler d1 execute g2333-db --remote --file=./schema.sql
 - 画廊加灯箱 / 大图预览
 - 作品分类筛选
 - 给 R2 配公开域名，填 `R2_PUBLIC_BASE` 环境变量，图片就不再经过 Function
-- 招新表单接后端（照 `api/posts.js` 写一个 `api/join.js` 存进 D1 即可）
 - 内容改动目前靠 push 部署；如果要更快的预览，可以配 Preview 环境
