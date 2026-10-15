@@ -56,8 +56,15 @@ export const tagsToArray = (s) =>
     .map((t) => t.trim())
     .filter(Boolean);
 
-/** 校验并归一化一次写入/更新请求。返回 { error } 或 { values } */
-export function normalizeInput(body, { requireAll }) {
+/**
+ * 校验并归一化一次写入/更新请求。返回 { error } 或 { values }
+ *
+ * 两种内容共用同一套函数，但字段不全相同：
+ *   activities 有 event_date / location
+ *   posts      有 author
+ * 校验和入库都必须只碰本类型真实存在的列，否则会写进不存在的字段。
+ */
+export function normalizeInput(body, { requireAll, kind }) {
   const out = {};
 
   const str = (v) => (v == null ? '' : String(v).trim());
@@ -81,16 +88,25 @@ export function normalizeInput(body, { requireAll }) {
     out.body = text;
   }
 
-  if (requireAll || body.location !== undefined) out.location = str(body.location).slice(0, 200);
-  if (requireAll || body.author !== undefined) out.author = str(body.author).slice(0, 100);
   if (requireAll || body.cover !== undefined) out.cover = str(body.cover).slice(0, 500);
   if (requireAll || body.tags !== undefined) out.tags = joinTags(body.tags).slice(0, 300);
 
-  if (requireAll || body.event_date !== undefined) {
-    const d = str(body.event_date);
-    if (requireAll && !d) return { error: '活动日期必填' };
-    if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) return { error: '活动日期格式应为 YYYY-MM-DD' };
-    out.event_date = d;
+  if (kind === 'activities') {
+    if (requireAll || body.location !== undefined) {
+      out.location = str(body.location).slice(0, 200);
+    }
+    if (requireAll || body.event_date !== undefined) {
+      const d = str(body.event_date);
+      if (requireAll && !d) return { error: '活动日期必填' };
+      if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) return { error: '活动日期格式应为 YYYY-MM-DD' };
+      if (d) out.event_date = d;
+    }
+  }
+
+  if (kind === 'posts') {
+    if (requireAll || body.author !== undefined) {
+      out.author = str(body.author).slice(0, 100);
+    }
   }
 
   if (requireAll || body.status !== undefined) {
@@ -160,7 +176,7 @@ export function makeContentHandlers(kind) {
     const body = await request.json().catch(() => null);
     if (!body) return json({ ok: false, error: '请求体不是合法 JSON' }, 400);
 
-    const { values, error } = normalizeInput(body, { requireAll: true });
+    const { values, error } = normalizeInput(body, { requireAll: true, kind });
     if (error) return json({ ok: false, error }, 400);
 
     let id = slugify(body.id);
@@ -193,7 +209,7 @@ export function makeContentHandlers(kind) {
     const body = await request.json().catch(() => null);
     if (!body) return json({ ok: false, error: '请求体不是合法 JSON' }, 400);
 
-    const { values, error } = normalizeInput(body, { requireAll: false });
+    const { values, error } = normalizeInput(body, { requireAll: false, kind });
     if (error) return json({ ok: false, error }, 400);
 
     const keys = Object.keys(values);
