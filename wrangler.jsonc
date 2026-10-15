@@ -1,6 +1,10 @@
 {
-  // 项目名必须与 Cloudflare dashboard 里创建的项目名一致
-  "name": "g2333",
+  // 这是 Cloudflare Workers 那份「备份站」，不是主站。
+  // 主站是 Pages 项目 g2333 -> https://g2333.pages.dev
+  //
+  // 名字带 -backup 是故意的：Workers 叫 g2333 会和同账号的 Pages 项目 g2333
+  // 抢 g2333.<子域>.workers.dev 这个域名，导致部署失败。改名后各占一个。
+  "name": "g2333-backup",
   "compatibility_date": "2026-10-14",
   "assets": {
     // Astro 静态站的构建产物目录
