@@ -2,25 +2,24 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 /**
- * 画廊数据。
+ * 画廊分两块：
  *
- * 换成真作品的方式：
- * 1. 把图片放进 public/gallery/（文件名随意，建议小写英文 + 短横线）
- * 2. 改下面的 GALLERY 数组，src 写 /gallery/文件名
- * 3. 图片建议先用 WebP，单张控制在 300KB 以内
+ * 1. 常设作品（下面的 CURATED 数组）—— 构建时就在 HTML 里，秒开，不依赖数据库。
+ *    换真作品的方式：图片放进 public/gallery/，然后改这个数组。
  *
- * 如果换成 src/assets/ 并用 import，Astro 会自动做尺寸优化，
- * 但那要求构建时用 Astro 的图像服务，这里先用 public 保持简单。
+ * 2. 管理员上传的作品 —— 浏览器异步从 /api/images 取，只有 status = 'approved' 的会返回。
+ *    上传入口在 /admin（不在导航里，正常访客看不到）。
+ *
+ * 这样分工的好处：静态那些是「精挑细选的门面」，动态那些是「社员投稿」，
+ * 两拨内容互不覆盖，数据库出问题也不会让画廊变空白。
  */
-interface Work {
+interface Curated {
   src: string;
   title: string;
   author?: string;
-  /** 占位图带内联文字，真作品用 alt 描述 */
-  alt?: string;
 }
 
-const GALLERY: Work[] = [
+const CURATED: Curated[] = [
   { src: '/gallery/sakura-road.svg', title: '樱花坂道' },
   { src: '/gallery/starfall.svg', title: '星空下的约定' },
   { src: '/gallery/rainy-window.svg', title: '雨天的窗' },
@@ -41,26 +40,118 @@ const GALLERY: Work[] = [
     <header class="page-head">
       <p class="eyebrow">Gallery</p>
       <h1>画廊</h1>
-      <p class="lede">社员作品展示。当前是占位图，替换成真作品后直接部署即可。</p>
+      <p class="lede">社团成员的作品。想投稿的话，把图和标题发给管理员。</p>
     </header>
 
-    <div class="gallery reveal">
-      {
-        GALLERY.map((work) => (
-          <figure class="work">
-            <img src={work.src} alt={work.alt ?? work.title} loading="lazy" decoding="async" />
-            <figcaption>
-              <span>{work.title}</span>
-              {work.author && <em>{work.author}</em>}
-            </figcaption>
-          </figure>
-        ))
-      }
-    </div>
+    <section class="block">
+      <h2>常设作品</h2>
+      <div class="gallery">
+        {
+          CURATED.map((work) => (
+            <figure class="work">
+              <img src={work.src} alt={work.title} loading="lazy" decoding="async" />
+              <figcaption>
+                <span>{work.title}</span>
+                {work.author && <em>{work.author}</em>}
+              </figcaption>
+            </figure>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="block">
+      <h2>社员投稿</h2>
+      <p id="uploaded-status" class="status muted">正在加载…</p>
+      <div id="uploaded" class="gallery" hidden></div>
+      <p id="uploaded-empty" class="muted" hidden>还没有投稿作品。</p>
+    </section>
   </div>
 </BaseLayout>
 
+<script>
+  type Item = { id: string; title: string; author: string; url: string };
+
+  const grid = document.getElementById('uploaded');
+  const status = document.getElementById('uploaded-status');
+  const empty = document.getElementById('uploaded-empty');
+
+  function render(items: Item[]) {
+    if (!grid || !empty) return;
+
+    if (items.length === 0) {
+      empty.hidden = false;
+      return;
+    }
+
+    const frag = document.createDocumentFragment();
+    for (const item of items) {
+      const fig = document.createElement('figure');
+      fig.className = 'work';
+
+      const img = document.createElement('img');
+      img.src = item.url;
+      img.alt = item.title;
+      img.loading = 'lazy';
+      img.decoding = 'async';
+
+      const cap = document.createElement('figcaption');
+      const title = document.createElement('span');
+      title.textContent = item.title;
+      cap.append(title);
+
+      if (item.author) {
+        const author = document.createElement('em');
+        author.textContent = item.author;
+        cap.append(author);
+      }
+
+      fig.append(img, cap);
+      frag.append(fig);
+    }
+
+    grid.append(frag);
+    grid.hidden = false;
+  }
+
+  (async () => {
+    try {
+      const res = await fetch('/api/images');
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+      if (status) status.hidden = true;
+      render(data.items);
+    } catch (err) {
+      if (status) {
+        status.textContent = '投稿列表暂时读不出来，常设作品不受影响。';
+        status.dataset.state = 'err';
+      }
+      console.error(err);
+    }
+  })();
+</script>
+
 <style>
+  .block + .block {
+    margin-top: 48px;
+  }
+
+  .block h2 {
+    font-size: 1.25rem;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .status {
+    font-size: 0.92rem;
+  }
+
+  .status[data-state='err'] {
+    color: #fbbf24;
+  }
+
   .gallery {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

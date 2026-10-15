@@ -1,0 +1,422 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// 这个页面故意不放进导航，正常访客看不到入口。
+// 页面本身是静态壳子，真正的权限判断在 Cloudflare Pages Function 里
+// （POST /api/images 会校验会话 cookie），前端隐藏只是减少干扰，不是安全边界。
+---
+
+<BaseLayout title="管理后台" description="作品管理">
+  <div class="wrap page admin">
+    <header class="page-head">
+      <p class="eyebrow">Admin</p>
+      <h1>作品管理</h1>
+      <p id="who" class="lede muted"></p>
+    </header>
+
+    <!-- 未登录：登录表单 -->
+    <form id="login-panel" class="card form" hidden>
+      <h2>管理员登录</h2>
+      <label>
+        <span>用户名</span>
+        <input name="username" type="text" autocomplete="username" required />
+      </label>
+      <label>
+        <span>口令</span>
+        <input name="password" type="password" autocomplete="current-password" required />
+      </label>
+      <button class="btn btn-primary" type="submit">登录</button>
+      <p id="login-status" class="status" role="status" aria-live="polite"></p>
+    </form>
+
+    <!-- 已登录：上传 + 列表 -->
+    <div id="panel" hidden>
+      <form id="upload-form" class="card form">
+        <h2>上传作品</h2>
+        <label>
+          <span>标题<em>*</em></span>
+          <input name="title" type="text" maxlength="100" required />
+        </label>
+        <label>
+          <span>作者</span>
+          <input name="author" type="text" maxlength="50" placeholder="可留空" />
+        </label>
+        <label>
+          <span>图片<em>*</em></span>
+          <input name="file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required />
+        </label>
+        <label class="check">
+          <input name="approved" type="checkbox" checked />
+          <span>立刻在画廊显示（不勾就先进待审）</span>
+        </label>
+        <div class="row">
+          <button class="btn btn-primary" type="submit">上传</button>
+          <button class="btn btn-ghost" type="button" id="logout">退出登录</button>
+        </div>
+        <p id="upload-status" class="status" role="status" aria-live="polite"></p>
+      </form>
+
+      <section class="block">
+        <h2>全部作品</h2>
+        <p id="list-status" class="status muted">正在加载…</p>
+        <div id="list" class="list" hidden></div>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  type Item = {
+    id: string;
+    title: string;
+    author: string;
+    url: string;
+    status: string;
+  };
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
+
+  const loginPanel = $<HTMLFormElement>('login-panel');
+  const loginForm = $<HTMLFormElement>('login-panel');
+  const loginStatus = $('login-status');
+  const panel = $('panel');
+  const who = $('who');
+
+  const uploadForm = $<HTMLFormElement>('upload-form');
+  const uploadStatus = $('upload-status');
+  const listEl = $('list');
+  const listStatus = $('list-status');
+
+  const STATUS_LABEL: Record<string, string> = {
+    approved: '已显示',
+    pending: '待审',
+    hidden: '已隐藏',
+  };
+
+  async function api(path: string, init?: RequestInit) {
+    const res = await fetch(path, { credentials: 'same-origin', ...init });
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  }
+
+  function showLoggedIn(user: string) {
+    if (loginPanel) loginPanel.hidden = true;
+    if (panel) panel.hidden = false;
+    if (who) who.textContent = `已登录：${user}`;
+    loadList();
+  }
+
+  function showLoggedOut() {
+    if (loginPanel) loginPanel.hidden = false;
+    if (panel) panel.hidden = true;
+    if (who) who.textContent = '需要管理员登录';
+  }
+
+  // ---- 登录 ----
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!loginStatus) return;
+      loginStatus.textContent = '登录中…';
+      loginStatus.dataset.state = 'pending';
+
+      const { res, data } = await api('/api/login', {
+        method: 'POST',
+        body: new FormData(loginForm),
+      });
+
+      if (res.ok && data.ok) {
+        loginStatus.textContent = '';
+        showLoggedIn(data.user);
+      } else {
+        loginStatus.textContent = data.error || `登录失败（HTTP ${res.status}）`;
+        loginStatus.dataset.state = 'err';
+      }
+    });
+  }
+
+  // ---- 退出 ----
+  const logoutBtn = $<HTMLButtonElement>('logout');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await api('/api/logout', { method: 'POST' });
+      location.reload();
+    });
+  }
+
+  // ---- 上传 ----
+  if (uploadForm) {
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!uploadStatus) return;
+
+      const fd = new FormData(uploadForm);
+      if (!fd.get('approved')) fd.delete('approved');
+      else fd.set('status', 'approved');
+
+      uploadStatus.textContent = '上传中…';
+      uploadStatus.dataset.state = 'pending';
+
+      const { res, data } = await api('/api/images', { method: 'POST', body: fd });
+
+      if (res.ok && data.ok) {
+        uploadStatus.textContent = `已上传：${data.item.title}`;
+        uploadStatus.dataset.state = 'ok';
+        uploadForm.reset();
+        const cb = uploadForm.querySelector<HTMLInputElement>('input[name="approved"]');
+        if (cb) cb.checked = true;
+        loadList();
+      } else {
+        uploadStatus.textContent = data.error || `上传失败（HTTP ${res.status}）`;
+        uploadStatus.dataset.state = 'err';
+      }
+    });
+  }
+
+  // ---- 列表 ----
+  function row(item: Item) {
+    const el = document.createElement('div');
+    el.className = 'row-item';
+
+    const img = document.createElement('img');
+    img.src = item.url;
+    img.alt = item.title;
+    img.loading = 'lazy';
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const title = document.createElement('strong');
+    title.textContent = item.title;
+    const sub = document.createElement('span');
+    sub.className = 'muted';
+    sub.textContent = `${item.author || '未署名'} · ${STATUS_LABEL[item.status] || item.status}`;
+    meta.append(title, sub);
+
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+
+    const toggle = document.createElement('button');
+    toggle.className = 'btn btn-ghost btn-sm';
+    toggle.type = 'button';
+    const visible = item.status === 'approved';
+    toggle.textContent = visible ? '隐藏' : '显示';
+    toggle.addEventListener('click', async () => {
+      toggle.disabled = true;
+      const { res, data } = await api(`/api/images/${encodeURIComponent(item.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: visible ? 'hidden' : 'approved' }),
+      });
+      toggle.disabled = false;
+      if (res.ok && data.ok) loadList();
+      else alert(data.error || '操作失败');
+    });
+
+    const del = document.createElement('button');
+    del.className = 'btn btn-ghost btn-sm danger';
+    del.type = 'button';
+    del.textContent = '删除';
+    del.addEventListener('click', async () => {
+      if (!confirm(`确定删除「${item.title}」？图片文件会一起删掉。`)) return;
+      del.disabled = true;
+      const { res, data } = await api(`/api/images/${encodeURIComponent(item.id)}`, {
+        method: 'DELETE',
+      });
+      del.disabled = false;
+      if (res.ok && data.ok) loadList();
+      else alert(data.error || '删除失败');
+    });
+
+    actions.append(toggle, del);
+    el.append(img, meta, actions);
+    return el;
+  }
+
+  async function loadList() {
+    if (!listEl || !listStatus) return;
+    listStatus.hidden = false;
+    listStatus.textContent = '正在加载…';
+    listEl.hidden = true;
+    listEl.replaceChildren();
+
+    const { res, data } = await api('/api/images');
+    if (!res.ok || !data.ok) {
+      listStatus.textContent = data.error || `读取失败（HTTP ${res.status}）`;
+      listStatus.dataset.state = 'err';
+      return;
+    }
+
+    if (data.items.length === 0) {
+      listStatus.textContent = '还没有作品。';
+      return;
+    }
+
+    listStatus.hidden = true;
+    listEl.hidden = false;
+    for (const item of data.items) listEl.append(row(item));
+  }
+
+  // ---- 启动：先问服务端当前登录状态 ----
+  (async () => {
+    const { res, data } = await api('/api/session');
+    if (res.ok && data.loggedIn) showLoggedIn(data.user);
+    else showLoggedOut();
+  })();
+</script>
+
+<style>
+  .admin .form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 520px;
+  }
+
+  .admin .form h2 {
+    font-size: 1.15rem;
+    margin: 0;
+  }
+
+  .admin label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.9rem;
+  }
+
+  .admin label span {
+    color: var(--muted);
+  }
+
+  .admin em {
+    color: var(--accent);
+    font-style: normal;
+    margin-left: 3px;
+  }
+
+  .admin .check {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .admin .check input {
+    width: auto;
+  }
+
+  .admin .check span {
+    color: var(--text);
+  }
+
+  .admin input,
+  .admin select {
+    font: inherit;
+    color: var(--text);
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 10px 12px;
+    width: 100%;
+  }
+
+  .admin input[type='file'] {
+    padding: 8px;
+  }
+
+  .admin input:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+
+  .admin .row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .status {
+    margin: 0;
+    font-size: 0.88rem;
+    min-height: 1.4em;
+  }
+
+  .status[data-state='ok'] {
+    color: #34d399;
+  }
+  .status[data-state='err'] {
+    color: #fbbf24;
+  }
+  .status[data-state='pending'] {
+    color: var(--muted);
+  }
+
+  .block {
+    margin-top: 44px;
+  }
+
+  .block h2 {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .row-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+
+  .row-item img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 9px;
+    flex-shrink: 0;
+    background: var(--bg-soft);
+  }
+
+  .row-item .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .row-item .meta strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .row-item .meta span {
+    font-size: 0.82rem;
+  }
+
+  .row-item .actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 0.83rem;
+  }
+
+  .btn-sm.danger:hover {
+    color: #f87171;
+    border-color: #f87171;
+  }
+</style>
