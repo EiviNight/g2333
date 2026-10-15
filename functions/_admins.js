@@ -1,15 +1,20 @@
 // 口令哈希与管理员账号读写。
 //
 // 为什么用 PBKDF2 而不是直接存口令：数据库一旦泄漏，明文口令等于全丢。
-// PBKDF2-SHA256 是 WebCrypto 原生支持的，不需要额外依赖，210000 轮迭代
-// 在 Cloudflare Workers 上约几十毫秒，够用且不会拖慢登录。
+// PBKDF2-SHA256 是 WebCrypto 原生支持的，不需要额外依赖。
+//
+// 迭代次数为什么是 100000 而不是常见的 210000：
+// Cloudflare Workers 的 WebCrypto 实现拒绝超过 100000 轮的 PBKDF2
+// （报 "iteration counts above 100000 are not supported"）。
+// 100000 是运行时允许的上限，在 Workers 上约几十毫秒，够用。
 //
 // 为什么账号存数据库而不是环境变量：后台要支持自助改口令，
 // 而运行时的 Function 只能读环境变量、不能写。
 
 import { dbOf, timingSafeEqual } from './_auth.js';
 
-const ITERATIONS = 210000;
+const ITERATIONS = 100000;
+
 const HASH = 'SHA-256';
 const KEY_LEN = 32;
 

@@ -9,11 +9,13 @@
 -- ── 管理员账号 ──────────────────────────────────────────────
 -- 口令以 PBKDF2-SHA256 加盐哈希存储，不存明文。
 -- 后台可以自助改口令，所以账号必须落在数据库里（环境变量运行时改不了）。
+-- iterations 用 100000：Workers 的 WebCrypto 拒绝更高的轮数，
+-- 填 210000 会让登录直接报 "iteration counts above 100000 are not supported"。
 CREATE TABLE IF NOT EXISTS admin_users (
   username            TEXT PRIMARY KEY,
   password_hash       TEXT NOT NULL,   -- base64
   password_salt       TEXT NOT NULL,   -- base64
-  iterations          INTEGER NOT NULL DEFAULT 210000,
+  iterations          INTEGER NOT NULL DEFAULT 100000,
   created_at          INTEGER NOT NULL,
   updated_at          INTEGER NOT NULL,
   password_changed_at INTEGER

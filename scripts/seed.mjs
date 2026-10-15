@@ -51,7 +51,9 @@ async function sql(query, params = []) {
 }
 
 // ── 口令哈希（与 functions/_admins.js 保持同一套参数）────────────
-const ITERATIONS = 210000;
+// 注意：Workers 的 WebCrypto 不允许 PBKDF2 超过 100000 轮，
+// 所以这里也用 100000，改高会导致线上登录报错。
+const ITERATIONS = 100000;
 const KEY_LEN = 32;
 
 function toB64(bytes) {
