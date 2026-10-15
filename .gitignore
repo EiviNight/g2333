@@ -30,3 +30,7 @@ pnpm-debug.log*
 t-cookies.txt
 t.png
 *-cookies.txt
+
+# 本地验证脚本（可能含测试口令）
+.verify.mjs
+verify-*.mjs
